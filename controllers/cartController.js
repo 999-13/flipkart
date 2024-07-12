@@ -1,5 +1,6 @@
 const Cart = require('../models/Cart');
 const Printer = require('../models/Printer');
+const asyncHandler = require('express-async-handler');
 
 exports.addItemToCart = async (req, res) => {
   try {
@@ -30,15 +31,41 @@ exports.addItemToCart = async (req, res) => {
 };
 
 
-exports.getCartItems = async (req, res) => {
-  try {
-    // Fetch cart items with populated printer details
-    const cartItems = await Cart.find().populate('printerId', 'productTitle rating price HeadImage');
-    res.json({ data: cartItems });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+// Get all cart items with price details
+exports.getCartItems = asyncHandler(async (req, res) => {
+  // Find all cart items and populate printer details
+  const cartItems = await Cart.find().populate('printerId', '_id HeadImage productTitle rating price discountPercentage discountedPrice');
+
+  // Calculate total price and discount
+  let totalPrice = 0;
+  let totalDiscount = 0;
+
+  // Iterate through each item in the cart
+  cartItems.forEach(item => {
+    // Calculate price for each item
+    const itemPrice = item.quantity * item.printerId.price;
+    totalPrice += itemPrice;
+
+    // Calculate discount for each item
+    // For demonstration purposes, assuming a fixed discount per item
+    const itemDiscount = 0; // Replace with your discount calculation logic if applicable
+    totalDiscount += itemDiscount;
+  });
+
+  // Calculate total amount
+  const totalAmount = totalPrice - totalDiscount;
+
+  // Construct response object
+  const response = {
+    data: cartItems,
+    totalPrice: totalPrice.toFixed(2), // Ensure price is formatted to 2 decimal places
+    totalDiscount: totalDiscount.toFixed(2),
+    totalAmount: totalAmount.toFixed(2),
+  };
+
+  res.json(response);
+});
+
 
 exports.getCartItem = async (req, res) => {
   try {
